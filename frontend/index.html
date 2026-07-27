@@ -18,9 +18,12 @@
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // Expect the API running on :8000
-    fetch('http://localhost:8000/api/producers')
-      .then(r => r.json())
+    // Relative path so it works both locally and on Railway
+    fetch('/api/producers')
+      .then(r => {
+        if (!r.ok) throw new Error('API ' + r.status);
+        return r.json();
+      })
       .then(geo => {
         L.geoJSON(geo, {
           pointToLayer: (feat, latlng) => {
@@ -54,11 +57,13 @@
       })
       .catch(err => {
         console.error(err);
-        L.control({position:'topright'}).onAdd = () => {
+        const ctrl = L.control({position: 'topright'});
+        ctrl.onAdd = () => {
           const d = L.DomUtil.create('div', 'info');
-          d.innerHTML = 'API not reachable – start uvicorn on :8000';
+          d.innerHTML = 'Loading data… (first deploy may take 1–2 min while MSHA files download)';
           return d;
         };
+        ctrl.addTo(map);
       });
   </script>
 </body>
