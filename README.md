@@ -16,40 +16,39 @@ Competitive intelligence system for aggregate producers (sand, gravel, stone) ac
 | NJDOT bid-tab extractor | 📝 | Written against real layout; needs PDFs + API key |
 | Letting calendars | 📝 | NJDOT path known; others stubbed |
 
-## Quick start
+## Quick start (local)
 
 ```bash
-# 1. Clone / enter the repo
+git clone https://github.com/doron333/silvi-competitor-map.git
 cd silvi-competitor-map
-
-# 2. Install
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 3. Download the three MSHA Open Government files (updated every Friday)
-#    https://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
-#    - Mines.zip
-#    - MinesProdQuarterly.zip   (Employment/Production Quarterly)
-#    - ControllerOperatorHistory.zip  (optional)
-#    Place them in data/raw/
+# Option A – start.py downloads the MSHA files and serves the map
+python start.py
 
-mkdir -p data/raw data/processed
-# … copy the zips into data/raw/
-
-# 4. Run the ingest (≈ 30–60 s)
+# Option B – manual
+# Download Mines.zip + MinesProdQuarterly.zip into data/raw/ from
+# https://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
 python -m src.ingest.run_ingest
-
-# 5. Start the API
 uvicorn src.api.main:app --reload --port 8000
 ```
 
-Then open:
+Then open http://localhost:8000 (the map) or the API endpoints under /api/...
 
-- Health: http://localhost:8000/api/health
-- Producers GeoJSON: http://localhost:8000/api/producers
-- Capacity movers: http://localhost:8000/api/capacity/movers
-- Operator ranking: http://localhost:8000/api/capacity/operators
+## Deploy on Railway
+
+1. railway.app → New Project → Deploy from GitHub repo → select `doron333/silvi-competitor-map`
+2. Railway detects the Procfile / railway.toml and runs `python start.py`
+3. First deploy takes 1–3 minutes (downloads ~60 MB of MSHA data + builds DuckDB)
+4. Map is live at your Railway public URL
+
+Optional env vars:
+- `FORCE_INGEST=1` – force re-download + rebuild on next restart
+- `PORT` – injected automatically by Railway
+
+Note: DuckDB lives on the container filesystem. Attach a Railway Volume at `/app/data` if you want the database to survive restarts.
 
 ## Four real bugs that were fixed during the original build
 
