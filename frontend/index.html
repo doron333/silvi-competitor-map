@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Silvi Competitor Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+    .info { padding: 8px 12px; background: white; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([40.2, -75.5], 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Expect the API running on :8000
+    fetch('http://localhost:8000/api/producers')
+      .then(r => r.json())
+      .then(geo => {
+        L.geoJSON(geo, {
+          pointToLayer: (feat, latlng) => {
+            const hrs = feat.properties.hours || 0;
+            const yoy = feat.properties.yoy_pct_change;
+            const radius = Math.max(4, Math.min(18, Math.sqrt(hrs) / 30));
+            let color = '#3388ff';
+            if (yoy != null) {
+              color = yoy > 20 ? '#2ecc71' : yoy < -20 ? '#e74c3c' : '#f39c12';
+            }
+            return L.circleMarker(latlng, {
+              radius,
+              fillColor: color,
+              color: '#333',
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.75
+            });
+          },
+          onEachFeature: (feat, layer) => {
+            const p = feat.properties;
+            layer.bindPopup(
+              `<b>${p.mine_name}</b><br/>
+               ${p.operator}<br/>
+               ${p.county}, ${p.state}<br/>
+               Hours: ${p.hours?.toLocaleString() || '—'}<br/>
+               YoY: ${p.yoy_pct_change != null ? p.yoy_pct_change + '%' : '—'}`
+            );
+          }
+        }).addTo(map);
+      })
+      .catch(err => {
+        console.error(err);
+        L.control({position:'topright'}).onAdd = () => {
+          const d = L.DomUtil.create('div', 'info');
+          d.innerHTML = 'API not reachable – start uvicorn on :8000';
+          return d;
+        };
+      });
+  </script>
+</body>
+</html>
