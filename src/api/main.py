@@ -19,11 +19,13 @@ from pathlib import Path
 from typing import Optional, List
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 import duckdb
 
 ROOT = Path(__file__).resolve().parents[2]
 DB_PATH = ROOT / "data" / "processed" / "competitor_map.duckdb"
+FRONTEND_DIR = ROOT / "frontend"
 
 app = FastAPI(
     title="Silvi Competitor Map API",
@@ -178,6 +180,20 @@ def prices():
 @app.get("/api/contractors")
 def contractors():
     return {"status": "stub", "message": "Populated from bid-tab extraction"}
+
+
+# Serve the map frontend at /
+@app.get("/")
+def index():
+    index_path = FRONTEND_DIR / "index.html"
+    if not index_path.exists():
+        return {"message": "Frontend not found. API is running at /api/health"}
+    return FileResponse(index_path)
+
+
+# Optional: mount any extra static assets later
+if FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
 if __name__ == "__main__":
